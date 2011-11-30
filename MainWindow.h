@@ -68,6 +68,7 @@ protected:
   
   void SetupRGBCube();
   void SetupHSVCylinder();
+  void SetupCIELab();
   
   vtkPoints* CurrentPoints;
   vtkPoints* NextPoints;
@@ -87,5 +88,7 @@ protected:
   unsigned int CurrentStep;
 
 };
+
+void OutputBounds(const std::string& name, double bounds[6]);
 
 #endif

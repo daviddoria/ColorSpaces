@@ -19,7 +19,10 @@ INCLUDE( ${USE_VTK_FILE} )
 #FIND_PACKAGE(ITK REQUIRED)
 #INCLUDE( ${USE_ITK_FILE} )
 
-ADD_EXECUTABLE(ColorSpaces main.cpp MainWindow.cpp DisplayPoints.cpp
+ADD_EXECUTABLE(ColorSpaces main.cpp MainWindow.cpp DisplayPoints.cpp Conversions.cpp
 Helpers.cpp ${MOCSrcs} ${UISrcs})
 TARGET_LINK_LIBRARIES(ColorSpaces ${VTK_LIBRARIES} QVTK ${QT_LIBRARIES})
 INSTALL( TARGETS ColorSpaces RUNTIME DESTINATION ${INSTALL_DIR} )
+
+ADD_EXECUTABLE(Test Test.cpp Conversions.cpp)
+TARGET_LINK_LIBRARIES(Test ${VTK_LIBRARIES})

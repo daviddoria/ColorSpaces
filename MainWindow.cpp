@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "MainWindow.h"
+#include "Conversions.h"
 
 // VTK
 #include <vtkActor.h>
@@ -77,6 +78,7 @@ MainWindow::MainWindow(QWidget *parent)
   CreateColors();
   SetupRGBCube();
   SetupHSVCylinder();
+  SetupCIELab();
 
   this->Renderer->AddViewProp(this->TransitionPoints.Actor);
 
@@ -101,6 +103,7 @@ void MainWindow::CreateColors()
 
 void MainWindow::SetupRGBCube()
 {
+  std::cout << "SetupRGBCube" << std::endl;
   this->RGBPoints.Points->Reset();
   this->RGBPoints.Points->Squeeze();
   for(unsigned int i = 0 ;i < this->Colors->GetNumberOfTuples(); ++i)
@@ -111,8 +114,91 @@ void MainWindow::SetupRGBCube()
     }
 }
 
+void MainWindow::SetupCIELab()
+{
+  std::cout << "SetupCIELab" << std::endl;
+  this->CIELabPoints.Points->Reset();
+  this->CIELabPoints.Points->Squeeze();
+  for(unsigned int i = 0 ;i < this->Colors->GetNumberOfTuples(); ++i)
+    {
+    unsigned char color[3];
+    this->Colors->GetTupleValue(i, color);
+
+    float cielab[3];
+    RGBtoCIELab(color, cielab);
+
+    float L = cielab[0];
+    float a = cielab[1];
+    float b = cielab[2];
+
+//     float z = v*0.01f; // The spacing of the Z/V slices of the cylinder are way too far apart without this scaling
+//     float x = r*cos(theta * 2.0f * vtkMath::Pi());
+//     float y = r*sin(theta * 2.0f * vtkMath::Pi());
+    float xyz[3] = {L,a,b};
+    this->CIELabPoints.Points->InsertNextPoint(xyz);
+    }
+
+  // Translate and scale the points to they are in the same position and magnitude as the RGB cube
+  double cielabBounds[6];
+  this->CIELabPoints.Points->GetBounds(cielabBounds);
+
+  double rgbBounds[6];
+  this->RGBPoints.Points->GetBounds(rgbBounds);
+
+  OutputBounds("rgbBounds", rgbBounds);
+
+  float scale[3];
+  for(unsigned int i = 0 ; i < 3; ++i)
+    {
+    scale[i] = (rgbBounds[2*i + 1] - rgbBounds[2*i])/(cielabBounds[2*i + 1] - cielabBounds[2*i]);
+    }
+  OutputBounds("cielabBounds", cielabBounds);
+
+  std::cout << "Scale: " << scale[0] << " " << scale[1] << " " << scale[2] << std::endl;
+  
+  vtkSmartPointer<vtkTransform> scaleTransform = vtkSmartPointer<vtkTransform>::New();
+  scaleTransform->Scale(scale);
+  
+  vtkSmartPointer<vtkTransformPolyDataFilter> scaleTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  scaleTransformFilter->SetInputConnection(this->CIELabPoints.PolyData->GetProducerPort());
+  scaleTransformFilter->SetTransform(scaleTransform);
+  scaleTransformFilter->Update();
+
+  double scaledBounds[6];
+  scaleTransformFilter->GetOutput()->GetBounds(scaledBounds);
+
+  OutputBounds("scaledBounds", scaledBounds);
+  
+  float translation[3];
+  for(unsigned int i = 0 ; i < 3; ++i)
+    {
+    translation[i] = rgbBounds[2*i] - scaledBounds[2*i];
+    }
+    
+  vtkSmartPointer<vtkTransform> translateTransform = vtkSmartPointer<vtkTransform>::New();
+  translateTransform->Translate(translation);
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> translateTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  translateTransformFilter->SetInputConnection(scaleTransformFilter->GetOutputPort());
+  translateTransformFilter->SetTransform(translateTransform);
+  translateTransformFilter->Update();
+  
+  std::cout << "translation: " << translation[0] << " " << translation[1] << " " << translation[2] << std::endl;
+
+  this->CIELabPoints.Points->DeepCopy(translateTransformFilter->GetOutput()->GetPoints());
+
+  double newBounds[6];
+  this->CIELabPoints.Points->GetBounds(newBounds);
+  OutputBounds("newBounds", newBounds);
+
+  this->CIELabPoints.Points->Modified();
+  this->CIELabPoints.PolyData->Modified();
+  //transformFilter->RemoveAllInputs();
+}
+
 void MainWindow::SetupHSVCylinder()
 {
+  std::cout << "SetupHSVCylinder" << std::endl;
   this->HSVPoints.Points->Reset();
   this->HSVPoints.Points->Squeeze();
   for(unsigned int i = 0 ;i < this->Colors->GetNumberOfTuples(); ++i)
@@ -149,7 +235,8 @@ void MainWindow::SetupHSVCylinder()
   float scale[3];
   for(unsigned int i = 0 ; i < 3; ++i)
     {
-    scale[i] = (rgbBounds[2*i] - rgbBounds[2*i + 1])/(hsvBounds[2*i] - hsvBounds[2*i + 1]);
+    //scale[i] = (rgbBounds[2*i] - rgbBounds[2*i + 1])/(hsvBounds[2*i] - hsvBounds[2*i + 1]);
+    scale[i] = (rgbBounds[2*i + 1] - rgbBounds[2*i])/(hsvBounds[2*i + 1] - hsvBounds[2*i]);
     translation[i] = rgbBounds[2*i] - hsvBounds[2*i];
     }
 //   std::cout  << "xmin: " << bounds[0] << " "
@@ -320,4 +407,14 @@ void MainWindow::on_sldSpeed_valueChanged(int value)
 void MainWindow::on_sldSteps_valueChanged(int value)
 {
 
+}
+
+void OutputBounds(const std::string& name, double bounds[6])
+{
+  std::cout << name << " xmin: " << bounds[0] << " "
+            << name << " xmax: " << bounds[1] << std::endl
+            << name << " ymin: " << bounds[2] << " "
+            << name << " ymax: " << bounds[3] << std::endl
+            << name << " zmin: " << bounds[4] << " "
+            << name << " zmax: " << bounds[5] << std::endl;
 }
