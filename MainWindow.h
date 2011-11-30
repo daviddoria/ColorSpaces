@@ -20,7 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Qt
 #include "ui_MainWindow.h"
+#include <QTimer>
 
+// VTK
 #include <vtkSmartPointer.h>
 
 // Forward declarations
@@ -39,9 +41,13 @@ public:
   MainWindow(QWidget *parent = 0);
 
 public slots:
-  void on_pushButton_clicked();
+  void on_btnStep_clicked();
+  void on_btnTransition_clicked();
+  void Step();
 protected:
 
+  QTimer timer;
+  
   void CreateColors();
   
   void SetupRGBCube();

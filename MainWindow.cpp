@@ -102,6 +102,8 @@ MainWindow::MainWindow(QWidget *parent)
   //this->Renderer->AddViewProp(this->HSVActor);
   //this->Renderer->AddViewProp(this->RGBActor);
   this->Renderer->AddViewProp(this->CurrentActor);
+
+  connect(&timer, SIGNAL(timeout()), this, SLOT(Step()));
 }
 
 void MainWindow::CreateColors()
@@ -205,7 +207,17 @@ void MainWindow::SetupHSVCylinder()
   transformFilter->RemoveAllInputs();
 }
 
-void MainWindow::on_pushButton_clicked()
+void MainWindow::on_btnTransition_clicked()
+{
+  this->timer.start(500);
+}
+
+void MainWindow::on_btnStep_clicked()
+{
+  Step();
+}
+
+void MainWindow::Step()
 {
   this->CurrentStep++;
   std::cout << "Current step: " << this->CurrentStep << std::endl;
@@ -214,6 +226,7 @@ void MainWindow::on_pushButton_clicked()
   std::cout << "Transition: " << this->Transition << std::endl;
   if(this->Transition > 1.0f)
     {
+    this->timer.stop();
     return;
     }
   for(unsigned int pointId = 0; pointId < this->CurrentPoints->GetNumberOfPoints(); ++pointId)
