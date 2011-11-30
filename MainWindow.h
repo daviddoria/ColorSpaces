@@ -18,6 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+// Custom
+#include "DisplayPoints.h"
+
 // Qt
 #include "ui_MainWindow.h"
 #include <QTimer>
@@ -41,36 +44,37 @@ public:
   MainWindow(QWidget *parent = 0);
 
 public slots:
+  void on_btnStop_clicked();
   void on_btnStep_clicked();
   void on_btnTransition_clicked();
   void Step();
+
+  void on_radFromRGB_clicked();
+  void on_radFromHSV_clicked();
+  void on_radFromCIELab_clicked();
+  void on_radToRGB_clicked();
+  void on_radToHSV_clicked();
+  void on_radToCIELab_clicked();
+
+  void on_sldSpeed_valueChanged(int);
+  void on_sldSteps_valueChanged(int);
 protected:
 
   QTimer timer;
   
   void CreateColors();
+
+  void SetupFromGUI();
   
   void SetupRGBCube();
   void SetupHSVCylinder();
   
-  vtkSmartPointer<vtkPoints> CurrentPoints;
-  vtkSmartPointer<vtkPolyData> CurrentPolyData;
-  vtkSmartPointer<vtkVertexGlyphFilter> CurrentVertexGlyphFilter;
-  vtkSmartPointer<vtkPolyDataMapper> CurrentMapper;
-  vtkSmartPointer<vtkActor> CurrentActor;
-
-  vtkSmartPointer<vtkPoints> RGBPoints;
-  vtkSmartPointer<vtkPolyData> RGBPolyData;
-  vtkSmartPointer<vtkVertexGlyphFilter> RGBVertexGlyphFilter;
-  vtkSmartPointer<vtkPolyDataMapper> RGBMapper;
-  vtkSmartPointer<vtkActor> RGBActor;
-
-  vtkSmartPointer<vtkPoints> HSVPoints;
-  vtkSmartPointer<vtkPolyData> HSVPolyData;
-  vtkSmartPointer<vtkVertexGlyphFilter> HSVVertexGlyphFilter;
-  vtkSmartPointer<vtkPolyDataMapper> HSVMapper;
-  vtkSmartPointer<vtkActor> HSVActor;
-  
+  vtkPoints* CurrentPoints;
+  vtkPoints* NextPoints;
+  DisplayPoints TransitionPoints;
+  DisplayPoints RGBPoints;
+  DisplayPoints HSVPoints;
+  DisplayPoints CIELabPoints;
 
   vtkSmartPointer<vtkUnsignedCharArray> Colors;
   vtkSmartPointer<vtkRenderer> Renderer;
@@ -78,7 +82,8 @@ protected:
   unsigned int Spacing;
 
   float Transition; // This is the 'time' variable in the simulation
-  unsigned int NumberOfSteps;
+  unsigned int MaxNumberOfSteps;
+  unsigned int MaxSpeed;
   unsigned int CurrentStep;
 
 };
