@@ -2,8 +2,13 @@
 
 #include <algorithm> // min,max
 #include <cmath>
+#include <iostream>
+
 void RGBtoCIELab(unsigned char rgb[3], float cieLab[3])
 {
+  // The input RGB must be between [0,255]
+  // The output should be between [0, 100]
+
   // Normalize RGB values.
   double r = static_cast<double>(rgb[0])/static_cast<double>(255);
   double g = static_cast<double>(rgb[1])/static_cast<double>(255);
@@ -77,4 +82,11 @@ void RGBtoCIELab(unsigned char rgb[3], float cieLab[3])
   cieLab[0] = (116.0 * Y2) - 16.0; // L
   cieLab[1] = 500.0 * (X2 - Y2); // a
   cieLab[2] = 200.0 * (Y2 - Z2); // b
+  
+  if(cieLab[0] < 0 || cieLab[0] > 100 || cieLab[1] < 0 || cieLab[1] > 100 || cieLab[2] < 0 || cieLab[2] > 100)
+    {
+    std::cout << "Something is wrong!" << std::endl;
+    std::cout << "RGB " << rgb[0] << " " << rgb[1] << " " << rgb[2] << std::endl;
+    std::cout << "LAB " << cieLab[0] << " " << cieLab[1] << " " << cieLab[2] << std::endl;
+    }
 }

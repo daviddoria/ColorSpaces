@@ -10,9 +10,7 @@ void CreateTransparentImage(vtkImageData* input, vtkImageData* output)
 {
   int* dims = input->GetDimensions();
   output->SetDimensions(dims); 
-  output->SetNumberOfScalarComponents(4);
-  output->SetScalarTypeToUnsignedChar();
-  output->AllocateScalars();
+  output->AllocateScalars(VTK_UNSIGNED_CHAR,4);
   
   for (int y = 0; y < dims[1]; y++)
     {

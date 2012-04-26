@@ -123,9 +123,13 @@ void MainWindow::SetupCIELab()
     {
     unsigned char color[3];
     this->Colors->GetTupleValue(i, color);
-
+    
     float cielab[3];
     RGBtoCIELab(color, cielab);
+
+    //double color_double[3] = {static_cast<float>(color[0])/255.0f, static_cast<float>(color[1])/255.0f, static_cast<float>(color[2])/255.0f};
+    //double cielab[3];
+    //vtkMath::RGBToLab(color_double, cielab);
 
     float L = cielab[0];
     float a = cielab[1];
@@ -138,62 +142,66 @@ void MainWindow::SetupCIELab()
     this->CIELabPoints.Points->InsertNextPoint(xyz);
     }
 
-  // Translate and scale the points to they are in the same position and magnitude as the RGB cube
-  double cielabBounds[6];
-  this->CIELabPoints.Points->GetBounds(cielabBounds);
-
-  double rgbBounds[6];
-  this->RGBPoints.Points->GetBounds(rgbBounds);
-
-  OutputBounds("rgbBounds", rgbBounds);
-
-  float scale[3];
-  for(unsigned int i = 0 ; i < 3; ++i)
+  bool fitInRGBCube = false;
+  if(fitInRGBCube)
     {
-    scale[i] = (rgbBounds[2*i + 1] - rgbBounds[2*i])/(cielabBounds[2*i + 1] - cielabBounds[2*i]);
-    }
-  OutputBounds("cielabBounds", cielabBounds);
+    // Translate and scale the points to they are in the same position and magnitude as the RGB cube
+    double cielabBounds[6];
+    this->CIELabPoints.Points->GetBounds(cielabBounds);
 
-  std::cout << "Scale: " << scale[0] << " " << scale[1] << " " << scale[2] << std::endl;
-  
-  vtkSmartPointer<vtkTransform> scaleTransform = vtkSmartPointer<vtkTransform>::New();
-  scaleTransform->Scale(scale);
-  
-  vtkSmartPointer<vtkTransformPolyDataFilter> scaleTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  scaleTransformFilter->SetInputConnection(this->CIELabPoints.PolyData->GetProducerPort());
-  scaleTransformFilter->SetTransform(scaleTransform);
-  scaleTransformFilter->Update();
+    double rgbBounds[6];
+    this->RGBPoints.Points->GetBounds(rgbBounds);
 
-  double scaledBounds[6];
-  scaleTransformFilter->GetOutput()->GetBounds(scaledBounds);
+    OutputBounds("rgbBounds", rgbBounds);
 
-  OutputBounds("scaledBounds", scaledBounds);
-  
-  float translation[3];
-  for(unsigned int i = 0 ; i < 3; ++i)
-    {
-    translation[i] = rgbBounds[2*i] - scaledBounds[2*i];
-    }
+    float scale[3];
+    for(unsigned int i = 0 ; i < 3; ++i)
+      {
+      scale[i] = (rgbBounds[2*i + 1] - rgbBounds[2*i])/(cielabBounds[2*i + 1] - cielabBounds[2*i]);
+      }
+    OutputBounds("cielabBounds", cielabBounds);
+
+    std::cout << "Scale: " << scale[0] << " " << scale[1] << " " << scale[2] << std::endl;
     
-  vtkSmartPointer<vtkTransform> translateTransform = vtkSmartPointer<vtkTransform>::New();
-  translateTransform->Translate(translation);
+    vtkSmartPointer<vtkTransform> scaleTransform = vtkSmartPointer<vtkTransform>::New();
+    scaleTransform->Scale(scale);
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> scaleTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    scaleTransformFilter->SetInputData(this->CIELabPoints.PolyData);
+    scaleTransformFilter->SetTransform(scaleTransform);
+    scaleTransformFilter->Update();
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> translateTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  translateTransformFilter->SetInputConnection(scaleTransformFilter->GetOutputPort());
-  translateTransformFilter->SetTransform(translateTransform);
-  translateTransformFilter->Update();
-  
-  std::cout << "translation: " << translation[0] << " " << translation[1] << " " << translation[2] << std::endl;
+    double scaledBounds[6];
+    scaleTransformFilter->GetOutput()->GetBounds(scaledBounds);
 
-  this->CIELabPoints.Points->DeepCopy(translateTransformFilter->GetOutput()->GetPoints());
+    OutputBounds("scaledBounds", scaledBounds);
+    
+    float translation[3];
+    for(unsigned int i = 0 ; i < 3; ++i)
+      {
+      translation[i] = rgbBounds[2*i] - scaledBounds[2*i];
+      }
+      
+    vtkSmartPointer<vtkTransform> translateTransform = vtkSmartPointer<vtkTransform>::New();
+    translateTransform->Translate(translation);
 
-  double newBounds[6];
-  this->CIELabPoints.Points->GetBounds(newBounds);
-  OutputBounds("newBounds", newBounds);
+    vtkSmartPointer<vtkTransformPolyDataFilter> translateTransformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    translateTransformFilter->SetInputConnection(scaleTransformFilter->GetOutputPort());
+    translateTransformFilter->SetTransform(translateTransform);
+    translateTransformFilter->Update();
+    
+    std::cout << "translation: " << translation[0] << " " << translation[1] << " " << translation[2] << std::endl;
 
-  this->CIELabPoints.Points->Modified();
-  this->CIELabPoints.PolyData->Modified();
-  //transformFilter->RemoveAllInputs();
+    this->CIELabPoints.Points->DeepCopy(translateTransformFilter->GetOutput()->GetPoints());
+
+    double newBounds[6];
+    this->CIELabPoints.Points->GetBounds(newBounds);
+    OutputBounds("newBounds", newBounds);
+
+    this->CIELabPoints.Points->Modified();
+    this->CIELabPoints.PolyData->Modified();
+    //transformFilter->RemoveAllInputs();
+    }
 }
 
 void MainWindow::SetupHSVCylinder()
@@ -253,7 +261,7 @@ void MainWindow::SetupHSVCylinder()
   transform->Translate(translation);
 
   vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  transformFilter->SetInputConnection(this->HSVPoints.PolyData->GetProducerPort());
+  transformFilter->SetInputData(this->HSVPoints.PolyData);
   transformFilter->SetTransform(transform);
   transformFilter->Update();
 

@@ -18,7 +18,7 @@ DisplayPoints::DisplayPoints()
 
   this->PolyData->SetPoints(this->Points);
 
-  this->VertexGlyphFilter->SetInputConnection(this->PolyData->GetProducerPort());
+  this->VertexGlyphFilter->SetInputData(this->PolyData);
 
   this->Mapper->SetInputConnection(this->VertexGlyphFilter->GetOutputPort());
   this->Actor->SetMapper(this->Mapper);
